@@ -1,4 +1,4 @@
-import google.generativeai as genai
+from google import genai
 from config import settings
 import json
 from celery_app import celery_app
@@ -11,8 +11,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+# Initialize the client with API key
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
+MODEL_ID = 'gemini-2.5-flash'
 
 def classify_complaint_text(text: str, channel: str, ward: str = None):
     prompt = f"""
@@ -36,7 +37,10 @@ def classify_complaint_text(text: str, channel: str, ward: str = None):
     }}
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt
+        )
         text_resp = response.text.strip()
         if text_resp.startswith("```json"):
             text_resp = text_resp[7:-3]
@@ -101,7 +105,10 @@ def classify_complaint_task(complaint_id: str, text: str, channel: str):
 def generate_morning_briefing(stats: dict):
     prompt = f"Generate a morning briefing summary and trend alert based on these stats: {json.dumps(stats)}. Return JSON with 'ai_summary' and 'trend_alert'."
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt
+        )
         text_resp = response.text.strip()
         if text_resp.startswith("```json"):
             text_resp = text_resp[7:-3]
@@ -127,7 +134,10 @@ def identify_assignment_intent(message: str, context_data: str):
     }}
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt
+        )
         text_resp = response.text.strip()
         if "```json" in text_resp:
             text_resp = text_resp.split("```json")[-1].split("```")[0]
@@ -161,6 +171,9 @@ You MUST follow these rules (GUARDRAILS):
 
 Please respond to the Current User Message following the Guardrails.
 """
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model=MODEL_ID,
+        contents=prompt
+    )
     return response.text
 

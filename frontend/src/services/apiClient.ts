@@ -104,11 +104,18 @@ class ApiClient {
       return data;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Network error or CORS issue';
+      const isDnsError = message.includes('Failed to fetch') || message.includes('ERR_NAME_NOT_RESOLVED');
+      
       console.error('[LOGIN] Error:', {
         message,
+        isDnsError,
         apiUrl: API_BASE_URL,
         timestamp: new Date().toISOString(),
       });
+
+      if (isDnsError) {
+        throw new Error(`Connection Error: Could not resolve server at ${API_BASE_URL}. Please check your internet connection or DNS settings (e.g., try 8.8.8.8).`);
+      }
       throw error;
     }
   }
